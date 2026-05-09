@@ -144,14 +144,15 @@ int main(void)
             }
             // skip the \r\n\r\n
             body += 4;
-            
+
             char test[33] = {0};
             sscanf(body, "%32s", test);
-            if (strlen(test) == 32) {
+            if (strlen(test) == 32)
+            {
                 send(client_socket, responses.response_400, strlen(responses.response_400), 0);
                 closesocket(client_socket);
                 continue;
-            }  // check for proper length name
+            } // check for proper length name
 
             if (sscanf(body, "%31s %u", entry.username, &entry.score) != 2)
             {
