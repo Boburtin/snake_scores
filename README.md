@@ -1,7 +1,7 @@
 
 # Snake Highscore Database Server
 
-This project aims to manage the submission/retrieval of user scores for a snake game. It's extremely rudimentary at the moment, as most of my work thus far has been learning Winsock2 and sqlite3.
+This project aims to manage the submission/retrieval of user scores for different minigame projects. It's extremely rudimentary at the moment, as most of my work thus far has been learning how TCP and HTTP work on C. The goal is to get better at understanding request parsing and network protocols at a lower level than I was previously used to managing on Node/Express. Sodium was added for password hashing and token generation, and there's no JSON parsing at the moment but I may switch from plaintext to JSON later.
 
 ## Building
 
