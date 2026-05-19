@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c23 -Wall -Werror 
 LDFLAGS = -static
-LDLIBS = -lws2_32
+LDLIBS = -lsodium -lsqlite3 -lws2_32
 
 SRCDIR := src
 BUILDDIR := build
@@ -17,11 +17,14 @@ $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
-	@mkdir -p $(BUILDDIR) $(BUILDDIR)/lib bin
+	@mkdir -p $(BUILDDIR) bin
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean: 
 	@$(RM) -r $(BUILDDIR) $(TARGET) bin
 	@$(RM) scores.db
 
-.PHONY: clean
+run:
+	./$(TARGET)
+
+.PHONY: clean run
