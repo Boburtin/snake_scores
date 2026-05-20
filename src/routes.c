@@ -105,7 +105,7 @@ int handle_auth(SOCKET client_socket, sqlite3 *db, char *path, char *req_buf, Re
         if (sqlite3_step(statement) != SQLITE_ROW)
         {
             sqlite3_finalize(statement);
-            send(client_socket, res->res_500, strlen(res->res_500), 0);
+            send(client_socket, res->res_401, strlen(res->res_401), 0);
             closesocket(client_socket);
             return 1;
         }
@@ -152,17 +152,17 @@ int handle_auth(SOCKET client_socket, sqlite3 *db, char *path, char *req_buf, Re
 int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
 {
     sqlite3_stmt *statement = NULL;
-    char *body = strchr(path, '?');
-    if (body == NULL)
+    char *query_param = strchr(path, '?');
+    if (query_param == NULL)
     {
         send(client_socket, res->res_400, strlen(res->res_400), 0);
         closesocket(client_socket);
         return 1;
     }
     char strcat_buf[MAX_RESPONSE_BODY] = {0};
-    if (strncmp(body, "?limit=", 7) == 0)
+    if (strncmp(query_param, "?limit=", 7) == 0)
     {
-        body += 7;
+        query_param += 7;
         char tuple[65] = {0};
         char res_buf[MAX_RESPONSE_FULL] = {0};
         if (strncmp(path, "/score/snake", 12) == 0)
@@ -173,9 +173,9 @@ int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
                 closesocket(client_socket);
                 return 1;
             }
-            int scores_limit = atoi(body);
+            int scores_limit = atoi(query_param);
             if (scores_limit >= 1000 || scores_limit < 0)
-                scores_limit = 999;
+                scores_limit = 10;
             sqlite3_bind_int(statement, 1, scores_limit);
             while (sqlite3_step(statement) == SQLITE_ROW)
             {
@@ -204,9 +204,9 @@ int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
                 closesocket(client_socket);
                 return 1;
             }
-            int scores_limit = atoi(body);
+            int scores_limit = atoi(query_param);
             if (scores_limit >= 1000 || scores_limit < 0)
-                scores_limit = 999;
+                scores_limit = 10;
             sqlite3_bind_int(statement, 1, scores_limit);
             while (sqlite3_step(statement) == SQLITE_ROW)
             {
@@ -228,9 +228,12 @@ int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
             return 0;
         }
     }
-    else if (strncmp(body, "?username=", 10) == 0)
+    if (strncmp(query_param, "?username=", 10) == 0)
     {
-        body += 10;
+        char res_string[65] = {0};
+        char req_string[33] = {0};
+        char res_buf[256] = {0};
+        query_param += 10;
         if (strncmp(path, "/score/snake", 12) == 0)
         {
             if (sqlite3_prepare_v2(db, select_srch_snakescore, -1, &statement, NULL) != SQLITE_OK)
@@ -239,6 +242,30 @@ int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
                 closesocket(client_socket);
                 return 1;
             }
+            if (strlen(query_param) >= 32)
+            {
+                send(client_socket, res->res_400, strlen(res->res_400), 0);
+                closesocket(client_socket);
+                return 1;
+            }
+            strcpy(req_string, query_param);
+            sqlite3_bind_text(statement, 1, req_string, -1, SQLITE_STATIC);
+            if (sqlite3_step(statement) != SQLITE_ROW)
+            {
+                sqlite3_finalize(statement);
+                send(client_socket, res->res_500, strlen(res->res_500), 0);
+                closesocket(client_socket);
+                return 1;
+            }
+            const char *usrname = (const char *)sqlite3_column_text(statement, 0);
+            int scr = sqlite3_column_int(statement, 1);
+            snprintf(res_string, sizeof(res_string), "%s %d", usrname, scr);
+            // add score overflow guard later
+            sqlite3_finalize(statement);
+            snprintf(res_buf, sizeof(res_buf), "%s%zu\r\n\r\n%s", res->res_200_part, strlen(res_string), res_string);
+            send(client_socket, res_buf, strlen(res_buf), 0);
+            closesocket(client_socket);
+            return 0;
         }
         if (strncmp(path, "/score/pong", 11) == 0)
         {
@@ -248,6 +275,30 @@ int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
                 closesocket(client_socket);
                 return 1;
             }
+            if (strlen(query_param) >= 32)
+            {
+                send(client_socket, res->res_400, strlen(res->res_400), 0);
+                closesocket(client_socket);
+                return 1;
+            }
+            strcpy(req_string, query_param);
+            sqlite3_bind_text(statement, 1, req_string, -1, SQLITE_STATIC);
+            if (sqlite3_step(statement) != SQLITE_ROW)
+            {
+                sqlite3_finalize(statement);
+                send(client_socket, res->res_500, strlen(res->res_500), 0);
+                closesocket(client_socket);
+                return 1;
+            }
+            const char *usrname = (const char *)sqlite3_column_text(statement, 0);
+            int scr = sqlite3_column_int(statement, 1);
+            snprintf(res_string, sizeof(res_string), "%s %d", usrname, scr);
+            // TODO: overflow guard
+            sqlite3_finalize(statement);
+            snprintf(res_buf, sizeof(res_buf), "%s%zu\r\n\r\n%s", res->res_200_part, strlen(res_string), res_string);
+            send(client_socket, res_buf, strlen(res_buf), 0);
+            closesocket(client_socket);
+            return 0;
         }
     }
     return 0;

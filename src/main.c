@@ -153,9 +153,9 @@ int main(void)
         }
         if (strcmp(method, "GET") == 0 && strncmp(path, "/score/", 7) == 0)
         {
-            
+            handle_gets(client_socket, db, path, &res);
+            continue;
         }
-        
     }
     return 0;
 }

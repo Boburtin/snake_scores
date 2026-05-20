@@ -18,4 +18,6 @@ typedef struct {
 
 int handle_auth(SOCKET client_socket, sqlite3 *db, char *path, char *req_buf, Res *res);
 
+int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res);
+
 #endif
