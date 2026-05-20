@@ -5,7 +5,6 @@
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <winsock2.h>
 
 typedef struct {

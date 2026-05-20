@@ -1,13 +1,18 @@
 #include "Fwrd.h"
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_RESPONSE_BODY 64935
+#define MAX_RESPONSE_FULL 65065
 
 const char *insert_users = "INSERT OR REPLACE INTO USERS(username, hash) VALUES(?, ?)";
 const char *select_id_and_hash = "SELECT id, hash FROM users WHERE username = ?";
 const char *insert_sessions = "INSERT INTO sessions(token, user_id, expires_at) VALUES (?, ?, ?)";
 const char *select_sessions_expiry = "SELECT id, expires_at FROM sessions WHERE token = ?";
-const char *select_n_snakescores =
-    "SELECT users.username, snake_scores.score FROM users JOIN snake_scores ON users.id = snake_scores.user_id LIMIT ?";
-const char *select_n_pongscores =
-    "SELECT users.username, pong_scores.score FROM users JOIN pong_scores ON users.id = pong_scores.user_id LIMIT ?";
+const char *select_n_snakescores = "SELECT users.username, snake_scores.score FROM users JOIN snake_scores ON users.id "
+                                   "= snake_scores.user_id ORDER BY snake_scores.score DESC LIMIT ?";
+const char *select_n_pongscores = "SELECT users.username, pong_scores.score FROM users JOIN pong_scores ON users.id = "
+                                  "pong_scores.user_id ORDER BY pong_scores.score DESC LIMIT ?";
 const char *select_user_snakescore = "SELECT score FROM snake_scores WHERE user_id = ?";
 const char *select_user_pongscore = "SELECT score FROM pong_scores WHERE user_id = ?";
 const char *select_srch_snakescore = "SELECT users.username, snake_scores.score FROM users JOIN snake_scores ON "
@@ -144,16 +149,22 @@ int handle_auth(SOCKET client_socket, sqlite3 *db, char *path, char *req_buf, Re
     return 1;
 }
 
-int handle_gets(SOCKET *client_socket, sqlite3 *db, char *path, Res *res)
+int handle_gets(SOCKET client_socket, sqlite3 *db, char *path, Res *res)
 {
-    char *body = strchr(path, '?');
-    body += 1;
-    char **results = NULL;
-    size_t count = 0;
     sqlite3_stmt *statement = NULL;
-    if (strncmp(body, "limit=", 6) == 0)
+    char *body = strchr(path, '?');
+    if (body == NULL)
     {
-        body += 6;
+        send(client_socket, res->res_400, strlen(res->res_400), 0);
+        closesocket(client_socket);
+        return 1;
+    }
+    char strcat_buf[MAX_RESPONSE_BODY] = {0};
+    if (strncmp(body, "?limit=", 7) == 0)
+    {
+        body += 7;
+        char tuple[65] = {0};
+        char res_buf[MAX_RESPONSE_FULL] = {0};
         if (strncmp(path, "/score/snake", 12) == 0)
         {
             if (sqlite3_prepare_v2(db, select_n_snakescores, -1, &statement, NULL) != SQLITE_OK)
@@ -162,6 +173,28 @@ int handle_gets(SOCKET *client_socket, sqlite3 *db, char *path, Res *res)
                 closesocket(client_socket);
                 return 1;
             }
+            int scores_limit = atoi(body);
+            if (scores_limit >= 1000 || scores_limit < 0)
+                scores_limit = 999;
+            sqlite3_bind_int(statement, 1, scores_limit);
+            while (sqlite3_step(statement) == SQLITE_ROW)
+            {
+                const char *usrname = (const char *)sqlite3_column_text(statement, 0);
+                int scr = sqlite3_column_int(statement, 1);
+                snprintf(tuple, sizeof(tuple), "%s %d\n", usrname, scr);
+                strcat(strcat_buf, tuple);
+            }
+            sqlite3_finalize(statement);
+            if (strlen(strcat_buf) == 0)
+            {
+                send(client_socket, res->res_404, strlen(res->res_404), 0);
+                closesocket(client_socket);
+                return 1;
+            }
+            snprintf(res_buf, sizeof(res_buf), "%s%zu\r\n\r\n%s", res->res_200_part, strlen(strcat_buf), strcat_buf);
+            send(client_socket, res_buf, strlen(res_buf), 0);
+            closesocket(client_socket);
+            return 0;
         }
         if (strncmp(path, "/score/pong", 11) == 0)
         {
@@ -171,11 +204,33 @@ int handle_gets(SOCKET *client_socket, sqlite3 *db, char *path, Res *res)
                 closesocket(client_socket);
                 return 1;
             }
+            int scores_limit = atoi(body);
+            if (scores_limit >= 1000 || scores_limit < 0)
+                scores_limit = 999;
+            sqlite3_bind_int(statement, 1, scores_limit);
+            while (sqlite3_step(statement) == SQLITE_ROW)
+            {
+                const char *usrname = (const char *)sqlite3_column_text(statement, 0);
+                int scr = sqlite3_column_int(statement, 1);
+                snprintf(tuple, sizeof(tuple), "%s %d\n", usrname, scr);
+                strcat(strcat_buf, tuple);
+            }
+            sqlite3_finalize(statement);
+            if (strlen(strcat_buf) == 0)
+            {
+                send(client_socket, res->res_404, strlen(res->res_404), 0);
+                closesocket(client_socket);
+                return 1;
+            }
+            snprintf(res_buf, sizeof(res_buf), "%s%zu\r\n\r\n%s", res->res_200_part, strlen(strcat_buf), strcat_buf);
+            send(client_socket, res_buf, strlen(res_buf), 0);
+            closesocket(client_socket);
+            return 0;
         }
     }
-    if (strncmp(body, "username=", 9) == 0)
+    else if (strncmp(body, "?username=", 10) == 0)
     {
-        body += 9;
+        body += 10;
         if (strncmp(path, "/score/snake", 12) == 0)
         {
             if (sqlite3_prepare_v2(db, select_srch_snakescore, -1, &statement, NULL) != SQLITE_OK)

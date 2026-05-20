@@ -7,20 +7,13 @@ const char *create_snake =
     "CREATE TABLE IF NOT EXISTS snake_scores(id INTEGER PRIMARY KEY AUTOINCREMENT,"
     " user_id INTEGER NOT NULL UNIQUE, score INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))";
 const char *insert_snake = "INSERT OR REPLACE INTO snake_scores(user_id, score) VALUES(?, ?)";
-const char *select_snake_hiscore = "SELECT score FROM snake_scores WHERE user_id = ?";
-const char *select_snake_Nscores = "SELECT users.username, snake_scores.score FROM users JOIN snake_scores"
-                                   " ON users.id = snake_scores.user_id ORDER BY snake_scores.score DESC LIMIT ?";
 const char *create_pong =
     "CREATE TABLE IF NOT EXISTS pong_scores(id INTEGER PRIMARY KEY AUTOINCREMENT,"
     " user_id INTEGER NOT NULL UNIQUE, score INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))";
 const char *insert_pong = "INSERT OR REPLACE INTO pong_scores(user_id, score) VALUES(?, ?)";
-const char *select_pong_hiscore = "SELECT score FROM pong_scores WHERE user_id = ?";
-const char *select_pong_Nscores = "SELECT users.username, pong_scores.score FROM users JOIN pong_scores"
-                                  " ON users.id = pong_scores.user_id ORDER BY pong_scores.score DESC LIMIT ?";
 const char *create_sessions =
     "CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT NOT NULL UNIQUE,"
     " user_id INTEGER NOT NULL UNIQUE, expires_at INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))";
-const char *select_sessions = "SELECT expires_at FROM sessions WHERE user_id = ?";
 
 Res res = {"HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\n"
            "Internal Server Error",
@@ -166,23 +159,3 @@ int main(void)
     }
     return 0;
 }
-
-/*
-/score/snake post
-/score/snake 100 get
-/score/snake name get
-
-/score/pong  post
-/score/pong 100 get
-/score/pong name get
-
-/score/ && post
-if (score/pong) {name score token in body}
-if (score/snake) {name score token in body}
-
-/score/ && get
-if (score/pong name) 
-if (score/snake name)
-if (score/pong num)
-if (score/snake num)
-*/
