@@ -15,14 +15,6 @@ const char *create_sessions =
     "CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT NOT NULL UNIQUE,"
     " user_id INTEGER NOT NULL UNIQUE, expires_at INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))";
 
-Res res = {"HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\n"
-           "Internal Server Error",
-           "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nNot Found",
-           "HTTP/1.1 401 Unauthorized\r\nContent-Type: text/plain\r\nContent-Length: 16\r\n\r\nUnauthorized",
-           "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 17\r\n\r\nMalformed Request",
-           "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nContent-Length: ",
-           "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "};
-
 SOCKET socket_setup(void)
 {
     WSADATA wsa_data;
@@ -119,6 +111,14 @@ int main(void)
         WSACleanup();
         return 1;
     }
+    Res res = {"HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\n"
+               "Internal Server Error",
+               "HTTP/1.1 409 Conflict\r\nContent-Type: text/plain\r\nContent-Length: 8\r\n\r\nConflict",
+               "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nNot Found",
+               "HTTP/1.1 401 Unauthorized\r\nContent-Type: text/plain\r\nContent-Length: 16\r\n\r\nUnauthorized",
+               "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 17\r\n\r\nMalformed Request",
+               "HTTP/1.1 201 Created\r\nContent-Type: text/plain\r\nContent-Length: ",
+               "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: "};
     while (1)
     {
         struct sockaddr_in client_addr = {0};
@@ -148,12 +148,17 @@ int main(void)
         }
         if (strcmp(method, "POST") == 0 && (strcmp(path, "/register") == 0 || strcmp(path, "/login") == 0))
         {
-            handle_auth(client_socket, db, path, req_buf, &res);
+            auth_posts(client_socket, db, path, req_buf, &res);
+            continue;
+        }
+        if (strcmp(method, "POST") == 0 && (strcmp(path, "/score/snake") == 0 || strcmp(path, "/score/pong") == 0))
+        {
+            score_posts(client_socket, db, path, req_buf, &res);
             continue;
         }
         if (strcmp(method, "GET") == 0 && strncmp(path, "/score/", 7) == 0)
         {
-            handle_gets(client_socket, db, path, &res);
+            score_gets(client_socket, db, path, &res);
             continue;
         }
     }

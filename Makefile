@@ -24,7 +24,7 @@ clean:
 	@$(RM) -r $(BUILDDIR) $(TARGET) bin
 	@$(RM) scores.db
 
-run:
+run: $(TARGET)
 	./$(TARGET)
 
-.PHONY: clean run
+.PHONY: all clean run
